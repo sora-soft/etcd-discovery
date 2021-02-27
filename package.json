@@ -4,15 +4,15 @@
   "description": "sora system etcd discovery",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "prepublish": "tsc",
+    "build": "tsc --build --clean & tsc",
+    "prepublish": "tsc --build --clean & tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": "git@github.com:sora-soft/etcd-discovery.git",
   "author": "yaya",
   "license": "WTFPL",
   "dependencies": {
-    "@sora-soft/framework": "^1.0.1",
+    "@sora-soft/framework": "^1.0.2",
     "etcd3": "^1.1.0"
   },
   "devDependencies": {

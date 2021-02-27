@@ -25,6 +25,8 @@ export interface IETCDDiscoveryOptions {
   prefix: string;
 }
 
+export type IETCDOptions = IOptions;
+
 class ETCDDiscovery extends Discovery {
 
   constructor(options: IETCDDiscoveryOptions) {
