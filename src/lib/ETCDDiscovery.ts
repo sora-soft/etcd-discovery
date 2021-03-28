@@ -1,5 +1,5 @@
-import {Etcd3, IKeyValue, IOptions, Lease, Watcher} from 'etcd3';
-import {Discovery, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor} from '@sora-soft/framework';
+import {Component, Discovery, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor, Runtime} from '@sora-soft/framework';
+import {EtcdComponent, IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component';
 
 export interface IETCDServiceMetaData extends IServiceMetaData {
   version: string;
@@ -20,7 +20,7 @@ export interface IETCDNodeMetaData extends INodeMetaData {
 }
 
 export interface IETCDDiscoveryOptions {
-  etcd: IOptions;
+  etcdComponentName: string;
   ttl: number;
   prefix: string;
 }
@@ -31,7 +31,7 @@ class ETCDDiscovery extends Discovery {
 
   constructor(options: IETCDDiscoveryOptions) {
     super();
-    this.etcd_ = new Etcd3(options.etcd);
+    this.component_ = Runtime.getComponent<EtcdComponent>(options.etcdComponentName);
     this.options_ = options;
     this.remoteServiceIdMap_ = new Map();
     this.localServiceIdMap_ = new Map();
@@ -41,8 +41,9 @@ class ETCDDiscovery extends Discovery {
   }
 
   async startup() {
-    this.lease_ = this.etcd_.lease(this.options_.ttl);
-    await this.lease_.grant();
+    await this.component_.start();
+    this.etcd_ = this.component_.client;
+    this.lease_ = this.component_.lease;
 
     this.serviceListWatcher_ = await this.etcd_.watch().prefix(`${this.servicePrefix}`).create();
     this.serviceListWatcher_.on('put', (kv) => {
@@ -95,7 +96,6 @@ class ETCDDiscovery extends Discovery {
     if (existed && existed.modRevision >= kv.mod_revision)
       return;
 
-    // 不是 service 应该就是 Node 的 endpoint 不在这里处理
     const service = this.remoteServiceIdMap_.get(meta.targetId);
     if (!service)
       return;
@@ -291,6 +291,7 @@ class ETCDDiscovery extends Discovery {
     return `${this.options_.prefix}/endpoint`
   }
 
+  private component_: EtcdComponent;
   private etcd_: Etcd3;
   private options_: IETCDDiscoveryOptions;
   private lease_: Lease;

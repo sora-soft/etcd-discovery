@@ -6,14 +6,15 @@
   "scripts": {
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "rimraf ./dist && tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "link": "npm link @sora-soft/etcd-component @sora-soft/framework"
   },
   "repository": "git@github.com:sora-soft/etcd-discovery.git",
   "author": "yaya",
   "license": "WTFPL",
   "dependencies": {
-    "@sora-soft/framework": "^1.0.9",
-    "etcd3": "^1.1.0"
+    "@sora-soft/etcd-component": "^1.0.2",
+    "@sora-soft/framework": "^1.0.10"
   },
   "devDependencies": {
     "@types/assert": "^1.5.4",
