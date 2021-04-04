@@ -1,6 +1,8 @@
 import {Component, Discovery, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor, Runtime} from '@sora-soft/framework';
 import {EtcdComponent, IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component';
 
+const pkg = require('../../package.json');
+
 export interface IETCDServiceMetaData extends IServiceMetaData {
   version: string;
   createRevision: string;
@@ -84,6 +86,17 @@ class ETCDDiscovery extends Discovery {
     await this.init();
 
     await this.executor_.start();
+  }
+
+  get info() {
+    return {
+      type: 'etcd',
+      version: this.version,
+    }
+  }
+
+  get version() {
+    return pkg.version;
   }
 
   protected updateEndpointMeta(kv: IKeyValue) {
