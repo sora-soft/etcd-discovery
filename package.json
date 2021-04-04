@@ -14,7 +14,7 @@
   "license": "WTFPL",
   "dependencies": {
     "@sora-soft/etcd-component": "^1.0.2",
-    "@sora-soft/framework": "^1.0.10"
+    "@sora-soft/framework": "^1.0.11"
   },
   "devDependencies": {
     "@types/assert": "^1.5.4",

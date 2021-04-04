@@ -103,7 +103,6 @@ class ETCDDiscovery extends Discovery {
     const data = {
       ...meta,
       service: service.name,
-      labels: service.labels,
     }
 
     this.remoteListenerIdMap_.set(id, {
