@@ -1,5 +1,7 @@
-import {Component, Discovery, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor, Runtime} from '@sora-soft/framework';
+import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor, Runtime} from '@sora-soft/framework';
 import {EtcdComponent, IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component';
+import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError';
+import {EtcdEvent} from '@sora-soft/etcd-component/dist/lib/EtcdEvent';
 
 const pkg = require('../../package.json');
 
@@ -33,7 +35,6 @@ class ETCDDiscovery extends Discovery {
 
   constructor(options: IETCDDiscoveryOptions) {
     super();
-    this.component_ = Runtime.getComponent<EtcdComponent>(options.etcdComponentName);
     this.options_ = options;
     this.remoteServiceIdMap_ = new Map();
     this.localServiceIdMap_ = new Map();
@@ -43,7 +44,17 @@ class ETCDDiscovery extends Discovery {
   }
 
   async startup() {
+    this.component_ = Runtime.getComponent<EtcdComponent>(this.options_.etcdComponentName);
+    if (!this.component_)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_COMPONENT_NOT_FOND, `ERR_COMPONENT_NOT_FOND`);
+
     await this.component_.start();
+    this.component_.emitter.on(EtcdEvent.LeaseReconnect, (lease) => {
+      Runtime.frameLogger.warn('etcd-discovery', {event: 'etcd-lost-lease'});
+      this.lease_ = lease;
+      this.discoveryEmitter_.emit(DiscoveryEvent.DiscoveryReconnect);
+    });
+
     this.etcd_ = this.component_.client;
     this.lease_ = this.component_.lease;
 
@@ -126,10 +137,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerCreated, data);
+      Runtime.frameLogger.info('discovery', {event: 'listener-created', info: data});
     } else {
       this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerUpdated, id, data);
+      Runtime.frameLogger.info('discovery', {event: 'listener-updated', id, info: data})
       if (existed.state !== meta.state) {
         this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerStateUpdate, id, meta.state, existed.state, data);
+        Runtime.frameLogger.info('discovery', { event: 'listener-state-update', id, state: meta.state});
       }
     }
   }
@@ -152,10 +166,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceCreated, meta);
+      Runtime.frameLogger.info('discovery', { event: 'service-created', id: meta.id, state: meta});
     } else {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceUpdated, id, meta);
+      Runtime.frameLogger.info('discovery', { event: 'service-update', id, state: meta});
       if (existed.state !== meta.state) {
         this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceStateUpdate, id, meta.state, existed.state, meta);
+        Runtime.frameLogger.info('discovery', { event: 'service-state-update', id, state: meta.state});
       }
     }
   }
@@ -178,10 +195,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeCreated, meta);
+      Runtime.frameLogger.info('discovery', {event: 'node-created', id, meta});
     } else {
       this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeUpdated, id, meta);
+      Runtime.frameLogger.info('discovery', {event: 'node-updated', id, meta});
       if (existed.state !== meta.state) {
         this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeStateUpdate, id, meta.state, existed.state, meta);
+        Runtime.frameLogger.info('discovery', {event: 'node-state-update', id, state: meta.state});
       }
     }
   }
@@ -193,6 +213,8 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteServiceIdMap_.delete(id);
     this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceDeleted, id, info);
+    Runtime.frameLogger.info('discovery', { event: 'service-deleted', id, info});
+
   }
 
   protected deleteEndpointMeta(id: string) {
@@ -202,6 +224,7 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteListenerIdMap_.delete(id);
     this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerDeleted, id, info);
+    Runtime.frameLogger.info('discovery', { event: 'listener-deleted', id});
   }
 
   async getEndpointList(service: string) {
