@@ -137,13 +137,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerCreated, data);
-      Runtime.frameLogger.info('discovery', {event: 'listener-created', info: data});
+      Runtime.frameLogger.debug('discovery', {event: 'listener-created', info: data});
     } else {
       this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerUpdated, id, data);
-      Runtime.frameLogger.info('discovery', {event: 'listener-updated', id, info: data})
+      Runtime.frameLogger.debug('discovery', {event: 'listener-updated', id, info: data})
       if (existed.state !== meta.state) {
         this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerStateUpdate, id, meta.state, existed.state, data);
-        Runtime.frameLogger.info('discovery', { event: 'listener-state-update', id, state: meta.state});
+        Runtime.frameLogger.debug('discovery', { event: 'listener-state-update', id, state: meta.state});
       }
     }
   }
@@ -166,13 +166,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceCreated, meta);
-      Runtime.frameLogger.info('discovery', { event: 'service-created', id: meta.id, state: meta});
+      Runtime.frameLogger.debug('discovery', { event: 'service-created', id: meta.id, state: meta});
     } else {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceUpdated, id, meta);
-      Runtime.frameLogger.info('discovery', { event: 'service-update', id, state: meta});
+      Runtime.frameLogger.debug('discovery', { event: 'service-update', id, state: meta});
       if (existed.state !== meta.state) {
         this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceStateUpdate, id, meta.state, existed.state, meta);
-        Runtime.frameLogger.info('discovery', { event: 'service-state-update', id, state: meta.state});
+        Runtime.frameLogger.debug('discovery', { event: 'service-state-update', id, state: meta.state});
       }
     }
   }
@@ -195,13 +195,13 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeCreated, meta);
-      Runtime.frameLogger.info('discovery', {event: 'node-created', id, meta});
+      Runtime.frameLogger.debug('discovery', {event: 'node-created', id, meta});
     } else {
       this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeUpdated, id, meta);
-      Runtime.frameLogger.info('discovery', {event: 'node-updated', id, meta});
+      Runtime.frameLogger.debug('discovery', {event: 'node-updated', id, meta});
       if (existed.state !== meta.state) {
         this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeStateUpdate, id, meta.state, existed.state, meta);
-        Runtime.frameLogger.info('discovery', {event: 'node-state-update', id, state: meta.state});
+        Runtime.frameLogger.debug('discovery', {event: 'node-state-update', id, state: meta.state});
       }
     }
   }
@@ -213,7 +213,7 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteServiceIdMap_.delete(id);
     this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceDeleted, id, info);
-    Runtime.frameLogger.info('discovery', { event: 'service-deleted', id, info});
+    Runtime.frameLogger.debug('discovery', { event: 'service-deleted', id, info});
 
   }
 
@@ -224,7 +224,7 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteListenerIdMap_.delete(id);
     this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerDeleted, id, info);
-    Runtime.frameLogger.info('discovery', { event: 'listener-deleted', id});
+    Runtime.frameLogger.debug('discovery', { event: 'listener-deleted', id});
   }
 
   async getEndpointList(service: string) {
