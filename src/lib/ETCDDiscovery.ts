@@ -25,7 +25,6 @@ export interface IETCDNodeMetaData extends INodeMetaData {
 
 export interface IETCDDiscoveryOptions {
   etcdComponentName: string;
-  ttl: number;
   prefix: string;
 }
 
@@ -140,10 +139,8 @@ class ETCDDiscovery extends Discovery {
       Runtime.frameLogger.debug('discovery', {event: 'listener-created', info: data});
     } else {
       this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerUpdated, id, data);
-      Runtime.frameLogger.debug('discovery', {event: 'listener-updated', id, info: data})
       if (existed.state !== meta.state) {
         this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerStateUpdate, id, meta.state, existed.state, data);
-        Runtime.frameLogger.debug('discovery', { event: 'listener-state-update', id, state: meta.state});
       }
     }
   }
@@ -169,10 +166,8 @@ class ETCDDiscovery extends Discovery {
       Runtime.frameLogger.debug('discovery', { event: 'service-created', id: meta.id, state: meta});
     } else {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceUpdated, id, meta);
-      Runtime.frameLogger.debug('discovery', { event: 'service-update', id, state: meta});
       if (existed.state !== meta.state) {
         this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceStateUpdate, id, meta.state, existed.state, meta);
-        Runtime.frameLogger.debug('discovery', { event: 'service-state-update', id, state: meta.state});
       }
     }
   }
@@ -198,10 +193,8 @@ class ETCDDiscovery extends Discovery {
       Runtime.frameLogger.debug('discovery', {event: 'node-created', id, meta});
     } else {
       this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeUpdated, id, meta);
-      Runtime.frameLogger.debug('discovery', {event: 'node-updated', id, meta});
       if (existed.state !== meta.state) {
         this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeStateUpdate, id, meta.state, existed.state, meta);
-        Runtime.frameLogger.debug('discovery', {event: 'node-state-update', id, state: meta.state});
       }
     }
   }
