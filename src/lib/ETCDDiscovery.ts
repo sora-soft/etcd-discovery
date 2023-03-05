@@ -1,9 +1,10 @@
-import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, QueueExecutor, Runtime} from '@sora-soft/framework';
+import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, ExError, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, Logger, QueueExecutor, Runtime} from '@sora-soft/framework';
 import {EtcdComponent, IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component';
 import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError';
 import {EtcdEvent} from '@sora-soft/etcd-component/dist/lib/EtcdEvent';
 
-const pkg = require('../../package.json');
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
+const pkg: {version: string} = require('../../package.json');
 
 export interface IETCDServiceMetaData extends IServiceMetaData {
   version: string;
@@ -45,7 +46,7 @@ class ETCDDiscovery extends Discovery {
   async startup() {
     this.component_ = Runtime.getComponent<EtcdComponent>(this.options_.etcdComponentName);
     if (!this.component_)
-      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_COMPONENT_NOT_FOND, `ERR_COMPONENT_NOT_FOND`);
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_COMPONENT_NOT_FOND, 'ERR_COMPONENT_NOT_FOND');
 
     await this.component_.start();
     this.component_.emitter.on(EtcdEvent.LeaseReconnect, (lease) => {
@@ -61,6 +62,8 @@ class ETCDDiscovery extends Discovery {
     this.serviceListWatcher_.on('put', (kv) => {
       this.executor_.doJob(async () => {
         this.updateServiceMeta(kv);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'update-service-meta-error', error: Logger.errorMessage(err)});
       });
     });
     this.serviceListWatcher_.on('delete', (kv) => {
@@ -68,6 +71,8 @@ class ETCDDiscovery extends Discovery {
         const key = kv.key.toString();
         const id = key.slice(this.servicePrefix.length + 1);
         this.deleteServiceMeta(id);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'delete-service-meta-error', error: Logger.errorMessage(err)});
       });
     });
 
@@ -75,6 +80,8 @@ class ETCDDiscovery extends Discovery {
     this.endpointListWatcher_.on('put', (kv) => {
       this.executor_.doJob(async () => {
         this.updateEndpointMeta(kv);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'update-endpoint-meta-error', error: Logger.errorMessage(err)});
       });
     });
     this.endpointListWatcher_.on('delete', (kv) => {
@@ -83,6 +90,8 @@ class ETCDDiscovery extends Discovery {
         const id = key.slice(this.endpointPrefix.length + 1);
 
         this.deleteEndpointMeta(id);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'delete-endpoint-meta-error', error: Logger.errorMessage(err)});
       });
     });
 
@@ -90,19 +99,21 @@ class ETCDDiscovery extends Discovery {
     this.nodeListWatcher_.on('put', (kv) => {
       this.executor_.doJob(async () => {
         this.updateNodeMeta(kv);
-      })
-    })
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'update-node-meta-error', error: Logger.errorMessage(err)});
+      });
+    });
 
     await this.init();
 
-    await this.executor_.start();
+    this.executor_.start();
   }
 
   get info() {
     return {
       type: 'etcd',
       version: this.version,
-    }
+    };
   }
 
   get version() {
@@ -111,7 +122,7 @@ class ETCDDiscovery extends Discovery {
 
   protected updateEndpointMeta(kv: IKeyValue) {
     const key = kv.key.toString();
-    const meta: IListenerMetaData = JSON.parse(kv.value.toString());
+    const meta = JSON.parse(kv.value.toString()) as IListenerMetaData;
 
     const id = key.slice(this.endpointPrefix.length + 1);
     const existed = this.remoteListenerIdMap_.get(id);
@@ -126,7 +137,7 @@ class ETCDDiscovery extends Discovery {
     const data = {
       ...meta,
       service: service.name,
-    }
+    };
 
     this.remoteListenerIdMap_.set(id, {
       ...data,
@@ -147,7 +158,7 @@ class ETCDDiscovery extends Discovery {
 
   protected updateServiceMeta(kv: IKeyValue) {
     const key = kv.key.toString();
-    const meta: IServiceMetaData = JSON.parse(kv.value.toString());
+    const meta = JSON.parse(kv.value.toString()) as IServiceMetaData;
 
     const id = key.slice(this.servicePrefix.length + 1);
     const existed = this.remoteServiceIdMap_.get(id);
@@ -163,7 +174,7 @@ class ETCDDiscovery extends Discovery {
     });
     if (!existed) {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceCreated, meta);
-      Runtime.frameLogger.debug('discovery', { event: 'service-created', id: meta.id, state: meta});
+      Runtime.frameLogger.debug('discovery', {event: 'service-created', id: meta.id, state: meta});
     } else {
       this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceUpdated, id, meta);
       if (existed.state !== meta.state) {
@@ -174,7 +185,7 @@ class ETCDDiscovery extends Discovery {
 
   protected updateNodeMeta(kv: IKeyValue) {
     const key = kv.key.toString();
-    const meta: INodeMetaData = JSON.parse(kv.value.toString());
+    const meta = JSON.parse(kv.value.toString()) as INodeMetaData;
 
     const id = key.slice(this.nodePrefix.length + 1);
     const existed = this.remoteNodeListMap_.get(id);
@@ -206,7 +217,7 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteServiceIdMap_.delete(id);
     this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceDeleted, id, info);
-    Runtime.frameLogger.debug('discovery', { event: 'service-deleted', id, info});
+    Runtime.frameLogger.debug('discovery', {event: 'service-deleted', id, info});
 
   }
 
@@ -217,21 +228,29 @@ class ETCDDiscovery extends Discovery {
 
     this.remoteListenerIdMap_.delete(id);
     this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerDeleted, id, info);
-    Runtime.frameLogger.debug('discovery', { event: 'listener-deleted', id});
+    Runtime.frameLogger.debug('discovery', {event: 'listener-deleted', id});
+  }
+
+  async getAllServiceList() {
+    return [...this.remoteServiceIdMap_].map(([_, info]) => info);
+  }
+
+  async getAllEndpointList(): Promise<IListenerMetaData[]> {
+    return [...this.remoteListenerIdMap_].map(([_, info]) => info);
   }
 
   async getEndpointList(service: string) {
     const serviceList = await this.getServiceList(service);
     const idList = serviceList.map(v => v.id);
-    return [...this.remoteListenerIdMap_].map(([id, info]) => {
+    return [...this.remoteListenerIdMap_].map(([_, info]) => {
       return info;
     }).filter((info) => {
       return idList.includes(info.targetId);
     });
   }
 
-  async getServiceList(name: string, localOnly = false) {
-    return [...this.remoteServiceIdMap_].map(([id, info]) => {
+  async getServiceList(name: string) {
+    return [...this.remoteServiceIdMap_].map(([_, info]) => {
       return info;
     }).filter((info) => {
       return info.name === name;
@@ -243,7 +262,7 @@ class ETCDDiscovery extends Discovery {
   }
 
   async getNodeList() {
-    return [...this.remoteNodeListMap_].map(([id, info]) => {
+    return [...this.remoteNodeListMap_].map(([_, info]) => {
       return info;
     });
   }
@@ -269,13 +288,13 @@ class ETCDDiscovery extends Discovery {
   async registerNode(node: INodeMetaData) {
     await this.executor_.doJob(async () => {
       await this.lease_.put(`${this.nodePrefix}/${node.id}`).value(JSON.stringify(node)).exec();
-    })
+    });
   }
 
   async unregisterNode(id: string) {
     await this.executor_.doJob(async () => {
       await this.etcd_.delete().key(`${this.endpointPrefix}/${id}`).exec();
-    })
+    });
   }
 
   async registerEndpoint(info: IListenerMetaData) {
@@ -316,7 +335,7 @@ class ETCDDiscovery extends Discovery {
   }
 
   private get endpointPrefix() {
-    return `${this.options_.prefix}/endpoint`
+    return `${this.options_.prefix}/endpoint`;
   }
 
   private component_: EtcdComponent;

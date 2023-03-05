@@ -7,14 +7,26 @@
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "rimraf ./dist && tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "link": "npm link @sora-soft/etcd-component @sora-soft/framework"
+    "prepare": "husky install",
+    "preCommit": "lint-staged",
+    "preversion": "lint-staged && npm run build"
   },
   "repository": "git@github.com:sora-soft/etcd-discovery.git",
   "author": "yaya",
   "license": "WTFPL",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint"
+    ]
+  },
   "dependencies": {
-    "@sora-soft/etcd-component": "^1.1.0",
-    "@sora-soft/framework": "^1.8.5"
+    "@sora-soft/etcd-component": "^1.1.1",
+    "@sora-soft/framework": "^1.9.0"
   },
   "devDependencies": {
     "@types/assert": "^1.5.4",
@@ -28,6 +40,15 @@
     "ts-mocha": "^8.0.0",
     "ts-node": "^9.1.1",
     "tslint": "^6.1.3",
-    "typescript": "^4.1.5"
+    "typescript": "^4.1.5",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.1.2",
+    "@typescript-eslint/eslint-plugin": "^5.54.0",
+    "@typescript-eslint/parser": "^5.54.0",
+    "eslint": "^8.35.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsdoc": "^40.0.1",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
+    "eslint-plugin-unused-imports": "^2.0.0"
   }
 }

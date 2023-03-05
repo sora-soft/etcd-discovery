@@ -12,4 +12,4 @@ class ETCDDiscoveryError extends ExError {
   }
 }
 
-export {ETCDDiscoveryError}
+export {ETCDDiscoveryError};
