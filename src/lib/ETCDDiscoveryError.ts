@@ -2,6 +2,7 @@ import {ExError} from '@sora-soft/framework';
 
 export enum ETCDDiscoveryErrorCode {
   ERR_COMPONENT_NOT_FOND = 'ERR_COMPONENT_NOT_FOND',
+  ERR_SERVICE_NOT_FOUND = 'ERR_SERVICE_NOT_FOUND',
 }
 
 class ETCDDiscoveryError extends ExError {

@@ -1,7 +1,7 @@
 import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, ExError, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, Logger, QueueExecutor, Runtime} from '@sora-soft/framework';
-import {EtcdComponent, IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component';
-import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError';
-import {EtcdEvent} from '@sora-soft/etcd-component/dist/lib/EtcdEvent';
+import {EtcdComponent, EtcdElection, EtcdEvent} from '@sora-soft/etcd-component';
+import {IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component/etcd3';
+import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
 const pkg: {version: string} = require('../../package.json');
@@ -258,7 +258,10 @@ class ETCDDiscovery extends Discovery {
   }
 
   async getServiceById(id: string) {
-    return this.remoteServiceIdMap_.get(id);
+    const service = this.remoteServiceIdMap_.get(id);
+    if (!service)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_SERVICE_NOT_FOUND, 'ERR_SERVICE_NOT_FOUND');
+    return service;
   }
 
   async getNodeList() {
@@ -309,6 +312,10 @@ class ETCDDiscovery extends Discovery {
     });
   }
 
+  createElection(name: string) {
+    return new EtcdElection(this.etcd_, `${this.singletonPrefix}/${name}`);
+  }
+
   private async init() {
     const serviceRes = await this.etcd_.getAll().prefix(`${this.servicePrefix}`).exec();
     for (const kv of serviceRes.kvs) {
@@ -336,6 +343,10 @@ class ETCDDiscovery extends Discovery {
 
   private get endpointPrefix() {
     return `${this.options_.prefix}/endpoint`;
+  }
+
+  private get singletonPrefix() {
+    return `${this.options_.prefix}/singleton`;
   }
 
   private component_: EtcdComponent;

@@ -1,1 +1,2 @@
-export * from './lib/ETCDDiscovery';
+export * from './lib/ETCDDiscovery.js';
+export * from './lib/ETCDDiscoveryError.js';

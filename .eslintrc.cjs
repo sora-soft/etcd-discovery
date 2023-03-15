@@ -32,9 +32,11 @@ module.exports = {
     'eslint-plugin-prefer-arrow',
     '@typescript-eslint',
     'unused-imports',
+    'file-extension-in-import-ts',
   ],
   'root': true,
   'rules': {
+    'file-extension-in-import-ts/file-extension-in-import-ts': 'error',
     '@typescript-eslint/member-delimiter-style': ['error', {
       'multiline': {
         'delimiter': 'semi',
@@ -104,6 +106,10 @@ module.exports = {
     ],
     '@typescript-eslint/typedef': 'off',
     '@typescript-eslint/unified-signatures': 'error',
+    'comma-spacing': ['error', {
+      'before': false,
+      'after': true,
+    }],
     'brace-style': [
       'error',
       '1tbs',
@@ -121,6 +127,7 @@ module.exports = {
     'guard-for-in': 'error',
     'id-denylist': [
       'error',
+      'any',
       'Number',
       'number',
       'String',
