@@ -2,9 +2,12 @@ import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, D
 import {EtcdComponent, EtcdElection, EtcdEvent} from '@sora-soft/etcd-component';
 import {IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component/etcd3';
 import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError.js';
+import {TypeGuard} from '@sora-soft/type-guard';
+import {readFile} from 'fs/promises';
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-var-requires
-const pkg: {version: string} = require('../../package.json');
+const pkg = JSON.parse(
+  await readFile(new URL('../../package.json', import.meta.url), {encoding: 'utf-8'})
+) as {version: string};
 
 export interface IETCDServiceMetaData extends IServiceMetaData {
   version: string;
@@ -35,6 +38,7 @@ class ETCDDiscovery extends Discovery {
 
   constructor(options: IETCDDiscoveryOptions) {
     super();
+    TypeGuard.assertType<IETCDDiscoveryOptions>(options);
     this.options_ = options;
     this.remoteServiceIdMap_ = new Map();
     this.localServiceIdMap_ = new Map();
