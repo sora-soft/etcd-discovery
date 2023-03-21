@@ -5,9 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "rimraf ./dist && tsc",
-    "prepublishOnly": "rimraf ./dist && tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf ./dist && ttsc",
+    "prepublishOnly": "rimraf ./dist && ttsc",
     "prepare": "husky install",
     "preCommit": "lint-staged",
     "preversion": "lint-staged && npm run build"
@@ -28,7 +27,7 @@
   "dependencies": {
     "@sora-soft/etcd-component": "^1.2.0",
     "@sora-soft/framework": "^1.10.0",
-    "@sora-soft/type-guard": "^1.0.2"
+    "@sora-soft/type-guard": "^1.0.5"
   },
   "devDependencies": {
     "@types/assert": "^1.5.4",
