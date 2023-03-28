@@ -38,7 +38,7 @@ class ETCDDiscovery extends Discovery {
 
   constructor(options: IETCDDiscoveryOptions) {
     super();
-    TypeGuard.assertType<IETCDDiscoveryOptions>(options);
+    TypeGuard.assert<IETCDDiscoveryOptions>(options);
     this.options_ = options;
     this.remoteServiceIdMap_ = new Map();
     this.localServiceIdMap_ = new Map();

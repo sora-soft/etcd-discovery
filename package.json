@@ -26,15 +26,11 @@
   },
   "dependencies": {
     "@sora-soft/etcd-component": "^1.2.0",
-    "@sora-soft/framework": "^1.10.0",
-    "@sora-soft/type-guard": "^1.0.5"
+    "@sora-soft/framework": "^1.10.4",
+    "@sora-soft/type-guard": "^1.1.0"
   },
   "devDependencies": {
-    "@types/assert": "^1.5.4",
-    "@types/expect": "^24.3.0",
-    "@types/mocha": "^8.2.0",
     "@types/node": "^14.14.27",
-    "@types/uuid": "^8.3.0",
     "@typescript-eslint/eslint-plugin": "^5.54.0",
     "@typescript-eslint/parser": "^5.54.0",
     "eslint": "^8.35.0",
