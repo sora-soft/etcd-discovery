@@ -107,6 +107,16 @@ class ETCDDiscovery extends Discovery {
         Runtime.frameLogger.error('etcd-discovery', err, {event: 'update-node-meta-error', error: Logger.errorMessage(err)});
       });
     });
+    this.nodeListWatcher_.on('delete', (kv) => {
+      this.executor_.doJob(async () => {
+        const key = kv.key.toString();
+        const id = key.slice(this.endpointPrefix.length + 1);
+
+        this.deleteNodeMeta(id);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'delete-node-meta-error', error: Logger.errorMessage(err)});
+      });
+    });
 
     await this.init();
 
@@ -212,6 +222,16 @@ class ETCDDiscovery extends Discovery {
         this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeStateUpdate, id, meta.state, existed.state, meta);
       }
     }
+  }
+
+  protected deleteNodeMeta(id: string) {
+    const info = this.remoteNodeListMap_.get(id);
+    if (!info)
+      return;
+
+    this.remoteNodeListMap_.delete(id);
+    this.nodeEmitter_.emit(DiscoveryNodeEvent.NodeDeleted, id, info);
+    Runtime.frameLogger.debug('discovery', {event: 'node-deleted', id, info});
   }
 
   protected deleteServiceMeta(id: string) {
