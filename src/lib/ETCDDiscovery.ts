@@ -110,8 +110,7 @@ class ETCDDiscovery extends Discovery {
     this.nodeListWatcher_.on('delete', (kv) => {
       this.executor_.doJob(async () => {
         const key = kv.key.toString();
-        const id = key.slice(this.endpointPrefix.length + 1);
-
+        const id = key.slice(this.nodePrefix.length + 1);
         this.deleteNodeMeta(id);
       }).catch((err: ExError) => {
         Runtime.frameLogger.error('etcd-discovery', err, {event: 'delete-node-meta-error', error: Logger.errorMessage(err)});

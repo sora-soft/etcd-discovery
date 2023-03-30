@@ -25,8 +25,8 @@
     ]
   },
   "dependencies": {
-    "@sora-soft/etcd-component": "^1.2.0",
-    "@sora-soft/framework": "^1.10.4",
+    "@sora-soft/etcd-component": "^1.2.4",
+    "@sora-soft/framework": "^1.10.5",
     "@sora-soft/type-guard": "^1.1.1"
   },
   "devDependencies": {
