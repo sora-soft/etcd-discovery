@@ -1,4 +1,4 @@
-import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, ExError, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, Logger, QueueExecutor, Runtime} from '@sora-soft/framework';
+import {Discovery, DiscoveryEvent, DiscoveryListenerEvent, DiscoveryNodeEvent, DiscoveryServiceEvent, DiscoveryWorkerEvent, ExError, IListenerEventData, IListenerMetaData, INodeMetaData, IServiceMetaData, IWorkerMetaData, Logger, QueueExecutor, Runtime} from '@sora-soft/framework';
 import {EtcdComponent, EtcdElection, EtcdEvent} from '@sora-soft/etcd-component';
 import {IKeyValue, IOptions, Lease, Watcher, Etcd3} from '@sora-soft/etcd-component/etcd3';
 import {ETCDDiscoveryError, ETCDDiscoveryErrorCode} from './ETCDDiscoveryError.js';
@@ -8,6 +8,12 @@ import {readFile} from 'fs/promises';
 const pkg = JSON.parse(
   await readFile(new URL('../../package.json', import.meta.url), {encoding: 'utf-8'})
 ) as {version: string};
+
+export interface ITECDWorkerMetaData extends IWorkerMetaData {
+  version: string;
+  createRevision: string;
+  modRevision: string;
+}
 
 export interface IETCDServiceMetaData extends IServiceMetaData {
   version: string;
@@ -61,6 +67,24 @@ class ETCDDiscovery extends Discovery {
 
     this.etcd_ = this.component_.client;
     this.lease_ = this.component_.lease;
+
+    this.workerListWatcher_ = await this.etcd_.watch().prefix(`${this.workerPrefix}`).create();
+    this.workerListWatcher_.on('put', (kv) => {
+      this.executor_.doJob(async () => {
+        this.updateWorkerMeta(kv);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'update-worker-meta-error', error: Logger.errorMessage(err)});
+      });
+    });
+    this.workerListWatcher_.on('delete', (kv) => {
+      this.executor_.doJob(async () => {
+        const key = kv.key.toString();
+        const id = key.slice(this.workerPrefix.length + 1);
+        this.deleteWorkerMeta(id);
+      }).catch((err: ExError) => {
+        Runtime.frameLogger.error('etcd-discovery', err, {event: 'delete-worker-meta-error', error: Logger.errorMessage(err)});
+      });
+    });
 
     this.serviceListWatcher_ = await this.etcd_.watch().prefix(`${this.servicePrefix}`).create();
     this.serviceListWatcher_.on('put', (kv) => {
@@ -169,6 +193,33 @@ class ETCDDiscovery extends Discovery {
     }
   }
 
+  protected updateWorkerMeta(kv: IKeyValue) {
+    const key = kv.key.toString();
+    const meta = JSON.parse(kv.value.toString()) as IServiceMetaData;
+
+    const id = key.slice(this.servicePrefix.length + 1);
+    const existed = this.remoteWorkerIdMap_.get(id);
+
+    if (existed && existed.modRevision >= kv.mod_revision)
+      return;
+
+    this.remoteWorkerIdMap_.set(id, {
+      ...meta,
+      version: kv.version,
+      modRevision: kv.mod_revision,
+      createRevision: kv.create_revision
+    });
+    if (!existed) {
+      this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerCreated, meta);
+      Runtime.frameLogger.debug('discovery', {event: 'service-created', id: meta.id, state: meta});
+    } else {
+      this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerDeleted, id, meta);
+      if (existed.state !== meta.state) {
+        this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerStateUpdate, id, meta.state, existed.state, meta);
+      }
+    }
+  }
+
   protected updateServiceMeta(kv: IKeyValue) {
     const key = kv.key.toString();
     const meta = JSON.parse(kv.value.toString()) as IServiceMetaData;
@@ -241,7 +292,16 @@ class ETCDDiscovery extends Discovery {
     this.remoteServiceIdMap_.delete(id);
     this.serviceEmitter_.emit(DiscoveryServiceEvent.ServiceDeleted, id, info);
     Runtime.frameLogger.debug('discovery', {event: 'service-deleted', id, info});
+  }
 
+  protected deleteWorkerMeta(id: string) {
+    const info = this.remoteWorkerIdMap_.get(id);
+    if (!info)
+      return;
+
+    this.remoteWorkerIdMap_.delete(id);
+    this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerDeleted, id, info);
+    Runtime.frameLogger.debug('discovery', {event: 'worker-deleted', id, info});
   }
 
   protected deleteEndpointMeta(id: string) {
@@ -252,6 +312,14 @@ class ETCDDiscovery extends Discovery {
     this.remoteListenerIdMap_.delete(id);
     this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerDeleted, id, info);
     Runtime.frameLogger.debug('discovery', {event: 'listener-deleted', id});
+  }
+
+  async getAllWorkerList() {
+    return [...this.remoteWorkerIdMap_].map(([_, info]) => info);
+  }
+
+  async getAllNodeList() {
+    return [...this.remoteNodeListMap_].map(([_, info]) => info);
   }
 
   async getAllServiceList() {
@@ -278,6 +346,35 @@ class ETCDDiscovery extends Discovery {
     }).filter((info) => {
       return info.name === name;
     });
+  }
+
+  async getWorkerList(name: string) {
+    return [...this.remoteWorkerIdMap_].map(([_, info]) => {
+      return info;
+    }).filter((info) => {
+      return info.name === name;
+    });
+  }
+
+  async getWorkerById(id: string) {
+    const worker = this.remoteWorkerIdMap_.get(id);
+    if (!worker)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_WORKER_NOT_FOUND, 'ERR_WORKER_NOT_FOUND');
+    return worker;
+  }
+
+  async getNodeById(id: string) {
+    const node = this.remoteNodeListMap_.get(id);
+    if (!node)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_NODE_NOT_FOUND, 'ERR_NODE_NOT_FOUND');
+    return node;
+  }
+
+  async getEndpointById(id: string) {
+    const endpoint = this.remoteListenerIdMap_.get(id);
+    if (!endpoint)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ENDPOINT_NOT_FOUND, 'ERR_ENDPOINT_NOT_FOUND');
+    return endpoint;
   }
 
   async getServiceById(id: string) {
@@ -308,6 +405,20 @@ class ETCDDiscovery extends Discovery {
     await this.executor_.doJob(async () => {
       await this.etcd_.delete().key(`${this.servicePrefix}/${id}`).exec();
       this.localServiceIdMap_.delete(id);
+    });
+  }
+
+  async registerWorker(meta: IWorkerMetaData): Promise<void> {
+    await this.executor_.doJob(async () => {
+      await this.lease_.put(`${this.workerPrefix}/${meta.id}`).value(JSON.stringify(meta)).exec();
+      this.localWorkerIdMap_.set(meta.id, meta);
+    });
+  }
+
+  async unregisterWorker(id: string): Promise<void> {
+    await this.executor_.doJob(async () => {
+      await this.etcd_.delete().key(`${this.workerPrefix}/${id}`).exec();
+      this.localWorkerIdMap_.delete(id);
     });
   }
 
@@ -356,6 +467,10 @@ class ETCDDiscovery extends Discovery {
     }
   }
 
+  private get workerPrefix() {
+    return `${this.options_.prefix}/worker`;
+  }
+
   private get servicePrefix() {
     return `${this.options_.prefix}/service`;
   }
@@ -376,11 +491,14 @@ class ETCDDiscovery extends Discovery {
   private etcd_: Etcd3;
   private options_: IETCDDiscoveryOptions;
   private lease_: Lease;
+  private workerListWatcher_: Watcher;
   private serviceListWatcher_: Watcher;
   private endpointListWatcher_: Watcher;
   private nodeListWatcher_: Watcher;
   private remoteServiceIdMap_: Map<string, IETCDServiceMetaData>;
   private localServiceIdMap_: Map<string, IServiceMetaData>;
+  private localWorkerIdMap_: Map<string, IWorkerMetaData>;
+  private remoteWorkerIdMap_: Map<string, ITECDWorkerMetaData>;
   private remoteListenerIdMap_: Map<string, IETCDEndpointMetaData>;
   private remoteNodeListMap_: Map<string, IETCDNodeMetaData>;
   private executor_: QueueExecutor;
