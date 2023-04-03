@@ -50,6 +50,8 @@ class ETCDDiscovery extends Discovery {
     this.localServiceIdMap_ = new Map();
     this.remoteListenerIdMap_ = new Map();
     this.remoteNodeListMap_ = new Map();
+    this.localWorkerIdMap_ = new Map();
+    this.remoteWorkerIdMap_ = new Map();
     this.executor_ = new QueueExecutor();
   }
 
