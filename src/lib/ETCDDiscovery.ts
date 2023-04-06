@@ -215,7 +215,7 @@ class ETCDDiscovery extends Discovery {
       this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerCreated, meta);
       Runtime.frameLogger.debug('discovery', {event: 'service-created', id: meta.id, state: meta});
     } else {
-      this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerDeleted, id, meta);
+      this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerUpdated, id, meta);
       if (existed.state !== meta.state) {
         this.workerEmitter_.emit(DiscoveryWorkerEvent.WorkerStateUpdate, id, meta.state, existed.state, meta);
       }
