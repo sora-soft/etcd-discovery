@@ -197,9 +197,9 @@ class ETCDDiscovery extends Discovery {
 
   protected updateWorkerMeta(kv: IKeyValue) {
     const key = kv.key.toString();
-    const meta = JSON.parse(kv.value.toString()) as IServiceMetaData;
+    const meta = JSON.parse(kv.value.toString()) as IWorkerMetaData;
 
-    const id = key.slice(this.servicePrefix.length + 1);
+    const id = key.slice(this.workerPrefix.length + 1);
     const existed = this.remoteWorkerIdMap_.get(id);
 
     if (existed && existed.modRevision >= kv.mod_revision)
