@@ -393,11 +393,14 @@ class ETCDDiscovery extends Discovery {
   }
 
   async shutdown() {
-    await this.lease_.revoke();
+    if (this.lease_)
+      await this.lease_.revoke();
   }
 
   async registerService(meta: IServiceMetaData) {
     await this.executor_.doJob(async () => {
+      if (!this.lease_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.lease_.put(`${this.servicePrefix}/${meta.id}`).value(JSON.stringify(meta)).exec();
       this.localServiceIdMap_.set(meta.id, meta);
     });
@@ -405,6 +408,8 @@ class ETCDDiscovery extends Discovery {
 
   async unregisterService(id: string) {
     await this.executor_.doJob(async () => {
+      if (!this.etcd_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.etcd_.delete().key(`${this.servicePrefix}/${id}`).exec();
       this.localServiceIdMap_.delete(id);
     });
@@ -412,6 +417,8 @@ class ETCDDiscovery extends Discovery {
 
   async registerWorker(meta: IWorkerMetaData): Promise<void> {
     await this.executor_.doJob(async () => {
+      if (!this.lease_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.lease_.put(`${this.workerPrefix}/${meta.id}`).value(JSON.stringify(meta)).exec();
       this.localWorkerIdMap_.set(meta.id, meta);
     });
@@ -419,6 +426,8 @@ class ETCDDiscovery extends Discovery {
 
   async unregisterWorker(id: string): Promise<void> {
     await this.executor_.doJob(async () => {
+      if (!this.etcd_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.etcd_.delete().key(`${this.workerPrefix}/${id}`).exec();
       this.localWorkerIdMap_.delete(id);
     });
@@ -426,33 +435,45 @@ class ETCDDiscovery extends Discovery {
 
   async registerNode(node: INodeMetaData) {
     await this.executor_.doJob(async () => {
+      if (!this.lease_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.lease_.put(`${this.nodePrefix}/${node.id}`).value(JSON.stringify(node)).exec();
     });
   }
 
   async unregisterNode(id: string) {
     await this.executor_.doJob(async () => {
+      if (!this.etcd_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.etcd_.delete().key(`${this.endpointPrefix}/${id}`).exec();
     });
   }
 
   async registerEndpoint(info: IListenerMetaData) {
     await this.executor_.doJob(async () => {
+      if (!this.lease_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.lease_.put(`${this.endpointPrefix}/${info.id}`).value(JSON.stringify(info)).exec();
     });
   }
 
   async unregisterEndPoint(id: string) {
     await this.executor_.doJob(async () => {
+      if (!this.etcd_)
+        throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
       await this.etcd_.delete().key(`${this.endpointPrefix}/${id}`).exec();
     });
   }
 
   createElection(name: string) {
+    if (!this.etcd_)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
     return new EtcdElection(this.etcd_, `${this.singletonPrefix}/${name}`);
   }
 
   private async init() {
+    if (!this.etcd_)
+      throw new ETCDDiscoveryError(ETCDDiscoveryErrorCode.ERR_ETCD_NOT_CONNECTED, 'ERR_ETCD_NOT_CONNECTED');
     const serviceRes = await this.etcd_.getAll().prefix(`${this.servicePrefix}`).exec();
     for (const kv of serviceRes.kvs) {
       this.updateServiceMeta(kv);
@@ -489,14 +510,14 @@ class ETCDDiscovery extends Discovery {
     return `${this.options_.prefix}/singleton`;
   }
 
-  private component_: EtcdComponent;
-  private etcd_: Etcd3;
+  private component_?: EtcdComponent;
+  private etcd_?: Etcd3;
   private options_: IETCDDiscoveryOptions;
-  private lease_: Lease;
-  private workerListWatcher_: Watcher;
-  private serviceListWatcher_: Watcher;
-  private endpointListWatcher_: Watcher;
-  private nodeListWatcher_: Watcher;
+  private lease_?: Lease;
+  private workerListWatcher_?: Watcher;
+  private serviceListWatcher_?: Watcher;
+  private endpointListWatcher_?: Watcher;
+  private nodeListWatcher_?: Watcher;
   private remoteServiceIdMap_: Map<string, IETCDServiceMetaData>;
   private localServiceIdMap_: Map<string, IServiceMetaData>;
   private localWorkerIdMap_: Map<string, IWorkerMetaData>;
