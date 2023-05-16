@@ -393,8 +393,11 @@ class ETCDDiscovery extends Discovery {
   }
 
   async shutdown() {
-    if (this.lease_)
+    await this.executor_.stop();
+    if (this.lease_) {
       await this.lease_.revoke();
+      this.lease_ = undefined;
+    }
   }
 
   async registerService(meta: IServiceMetaData) {
