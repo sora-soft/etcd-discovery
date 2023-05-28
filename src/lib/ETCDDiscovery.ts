@@ -224,15 +224,6 @@ class ETCDDiscovery extends Discovery {
       createRevision: kv.create_revision,
     });
     this.pushListenerUpdate();
-    // if (!existed) {
-    //   this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerCreated, data);
-    //   Runtime.frameLogger.debug('discovery', {event: 'listener-created', info: data});
-    // } else {
-    //   this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerUpdated, id, data);
-    //   if (existed.state !== meta.state) {
-    //     this.listenerEmitter_.emit(DiscoveryListenerEvent.ListenerStateUpdate, id, meta.state, existed.state, data);
-    //   }
-    // }
   }
 
   protected updateWorkerMeta(kv: IKeyValue) {
@@ -404,6 +395,10 @@ class ETCDDiscovery extends Discovery {
       await this.lease_.revoke();
       this.lease_ = undefined;
     }
+    this.nodeSubject_.complete();
+    this.workerSubject_.complete();
+    this.serviceSubject_.complete();
+    this.listenerSubject_.complete();
     this.subManager_.destory();
   }
 
