@@ -399,7 +399,7 @@ class ETCDDiscovery extends Discovery {
     this.workerSubject_.complete();
     this.serviceSubject_.complete();
     this.listenerSubject_.complete();
-    this.subManager_.destory();
+    this.subManager_.destroy();
   }
 
   async registerService(meta: IServiceMetaData) {
